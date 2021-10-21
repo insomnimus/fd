@@ -43,12 +43,12 @@ struct Pattern {
 impl Pattern {
 	fn new(s: &str, case_sensitive: bool) -> Result<Self, wax::GlobError> {
 		let mut glob = s.replace("\\", "/");
+		let has_sep = glob.contains('/');
+		if has_sep && !glob.starts_with("**/") && !glob.starts_with("./**/") {
+			glob.insert_str(0, "**/");
+		}
 		if !case_sensitive {
 			glob.insert_str(0, "(?i)");
-		}
-		let has_sep = glob.contains('/');
-		if has_sep {
-			glob.insert_str(0, "**/");
 		}
 		Glob::new(&glob)
 			.map_err(|e| e.into_owned())
@@ -102,12 +102,13 @@ impl Cmd {
 		let args = Arc::new(
 			m.values_of("file")
 				.unwrap()
-				.map(|s| Pattern::new(s, case_sensitive))
-				.collect::<Result<Vec<_>, _>>()
-				.unwrap_or_else(|e| {
-					eprintln!("pattern error: {}", e);
-					process::exit(2);
-				}),
+				.map(|s| {
+					Pattern::new(s, case_sensitive).unwrap_or_else(|e| {
+						eprintln!("pattern error({}): {}", s, e);
+						process::exit(2);
+					})
+				})
+				.collect::<Vec<_>>(),
 		);
 
 		Self {
