@@ -30,12 +30,12 @@ impl Cmd {
 		arg!(root: -p --path <ROOT> "The search root.").default_value("."),
 		arg!(depth: -r --recursion-depth [DEPTH] "the recursion depth. Unspecified or 0 means no limit.")
 		.validator(validate_usize),
-		arg!(-l --follow-links "Follow symbolic links."),
+		Arg::new("follow-links").short('l').long("follow-links").help("Follow symbolic links."),
 		arg!(-f --file "Search for plain files."),
 		arg!(-d --directory "Search for directories.")
 		.conflicts_with("file")
 		.visible_alias("dir"),
-		arg!(-I --no-ignore "Do not read .ignore files."),
+		Arg::new("no-ignore").short('I').long("no-ignore").help("Do not respect .ignore files."),
 		arg!(-a --hidden "Do not ignore hidden files and directories."),
 		arg!(-q --quiet "Do not report non fatal errors."),
 		arg!(n: -n <N> "Show top N matches for each argument past. A value of 0 means all.")
