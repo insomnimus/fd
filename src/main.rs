@@ -1,8 +1,13 @@
 mod app;
 mod cmd;
+mod pattern;
 
 fn main() {
-	if !cmd::Cmd::from_args().run() {
-		std::process::exit(3);
-	}
+	std::process::exit(match app::Cmd::from_args() {
+		Ok(c) => c.run(),
+		Err(e) => {
+			eprintln!("error: {}", e);
+			1
+		}
+	})
 }

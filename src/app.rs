@@ -1,71 +1,102 @@
+use std::path::PathBuf;
+
 use clap::{
+	arg,
 	crate_version,
 	App,
 	Arg,
 };
 
-pub fn new() -> App<'static> {
-	let app = App::new("fd")
-		.about("Find files on your filesystem.")
-		.version(crate_version!());
+use crate::pattern::*;
 
-	let case_sensitive = Arg::new("case-sensitive")
-		.short('c')
-		.long("case-sensitive")
-		.about("Match patterns case sensitively.");
-
-	let no_ignore = Arg::new("no-ignore")
-		.short('n')
-		.long("no-ignore")
-		.about("Do not ignore hidden directories, do not evaluate .ignore files.");
-
-	let file_type = Arg::new("type")
-		.short('t')
-		.long("type")
-		.about("Look for a specific file type.")
-		.possible_values(&["file", "folder"]);
-
-	let depth = Arg::new("depth")
-		.short('d')
-		.long("depth")
-		.about("Maximum depth to recurse.")
-		.takes_value(true)
-		.validator(is_pos_int);
-
-	let root = Arg::new("root")
-		.short('r')
-		.long("root")
-		.about("The search root.")
-		.default_value(".");
-
-	let all = Arg::new("all")
-		.short('a')
-		.long("all")
-		.about("Do not stop after the first match.");
-
-	let follow_links = Arg::new("follow-links")
-		.short('f')
-		.long("follow-links")
-		.about("Follow symbolic links.");
-
-	let args = Arg::new("file")
-		.multiple_values(true)
-		.required(true)
-		.about("File or glob pattern to search for.");
-
-	app.arg(root)
-		.arg(all)
-		.arg(case_sensitive)
-		.arg(file_type)
-		.arg(depth)
-		.arg(no_ignore)
-		.arg(follow_links)
-		.arg(args)
+pub struct Cmd {
+	pub file_type: FileType,
+	pub root: PathBuf,
+	pub depth: Option<usize>,
+	pub follow_links: bool,
+	pub ignore: bool,
+	pub hidden: bool,
+	pub quiet: bool,
+	pub n: usize,
+	pub args: Vec<Pattern>,
 }
 
-fn is_pos_int(s: &str) -> Result<(), String> {
-	match s.parse::<usize>() {
-		Ok(0) | Err(_) => Err(String::from("the value must be a positive integer")),
-		Ok(_) => Ok(()),
+impl Cmd {
+	pub fn from_args() -> Result<Self, globset::Error> {
+		let m = App::new("fd")
+		.about("Find files and directories.")
+		.version(crate_version!())
+		.args(&[
+		arg!(root: -p --path <ROOT> "The search root.").default_value("."),
+		arg!(depth: -r --recursion-depth [DEPTH] "the recursion depth. Unspecified or 0 means no limit.")
+		.validator(validate_usize),
+		arg!(-l --follow-links "Follow symbolic links."),
+		arg!(-f --file "Search for plain files."),
+		arg!(-d --directory "Search for directories.")
+		.conflicts_with("file")
+		.visible_alias("dir"),
+		arg!(-I --no-ignore "Do not read .ignore files."),
+		arg!(-a --hidden "Do not ignore hidden files and directories."),
+		arg!(-q --quiet "Do not report non fatal errors."),
+		arg!(n: -n <N> "Show top N matches for each argument past. A value of 0 means all.")
+		.default_value("1")
+		.validator(validate_usize),
+		Arg::new("args")
+		.help("File/folder to search for. Glob patterns are allowed.")
+		.validator(validate_filename)
+		.required(true)
+		.multiple_values(true),
+		])
+		.get_matches();
+
+		let file_type = if m.is_present("file") {
+			FileType::File
+		} else if m.is_present("directory") {
+			FileType::Directory
+		} else {
+			FileType::Any
+		};
+
+		let n = m.value_of("n").unwrap().parse::<usize>().unwrap();
+		let args = m
+			.values_of("args")
+			.unwrap()
+			.map(Pattern::new)
+			.collect::<Result<Vec<_>, _>>()?;
+
+		let depth = m
+			.value_of("depth")
+			.and_then(|s| s.parse::<usize>().ok().filter(|&n| n > 0));
+		let root = m.value_of("root").map(PathBuf::from).unwrap();
+
+		Ok(Self {
+			file_type,
+			args,
+			n,
+			depth,
+			root,
+			quiet: m.is_present("quiet"),
+			follow_links: m.is_present("follow-links"),
+			hidden: m.is_present("hidden"),
+			ignore: m.is_present("ignore"),
+		})
+	}
+}
+
+fn validate_usize(s: &str) -> Result<(), String> {
+	s.parse::<usize>()
+		.map(|_| {})
+		.map_err(|_| String::from("the value must be a non-negative integer"))
+}
+
+fn validate_filename(s: &str) -> Result<(), String> {
+	if cfg!(windows) && s.contains(|c| c == '\\' || c == '/' || c == ':') {
+		Err(String::from(
+			"the file name must not contain any path or drive separators",
+		))
+	} else if cfg!(not(windows)) && s.contains('/') {
+		Err(String::from("the file name can't contain path separators"))
+	} else {
+		Ok(())
 	}
 }
