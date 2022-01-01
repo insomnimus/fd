@@ -16,6 +16,11 @@ impl Cmd {
 			.max_depth(self.depth)
 			.follow_links(self.follow_links)
 			.ignore(self.ignore)
+			.parents(self.ignore)
+			.git_global(self.ignore)
+			.git_ignore(self.ignore)
+			.git_exclude(self.ignore)
+			.require_git(true)
 			.hidden(!self.hidden)
 			.build_parallel();
 
