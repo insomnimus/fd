@@ -28,7 +28,7 @@ impl Cmd {
 		.version(crate_version!())
 		.args(&[
 		arg!(root: -p --path <ROOT> "The search root.").default_value("."),
-		arg!(depth: -r --recursion-depth [DEPTH] "the recursion depth. Unspecified or 0 means no limit.")
+		arg!(-r --depth [DEPTH] "the recursion depth. Unspecified or 0 means no limit.")
 		.validator(validate_usize),
 		Arg::new("follow-links").short('l').long("follow-links").help("Follow symbolic links."),
 		arg!(-f --file "Search for plain files."),
@@ -78,7 +78,7 @@ impl Cmd {
 			quiet: m.is_present("quiet"),
 			follow_links: m.is_present("follow-links"),
 			hidden: m.is_present("hidden"),
-			ignore: m.is_present("ignore"),
+			ignore: !m.is_present("no-ignore"),
 		})
 	}
 }
