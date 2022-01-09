@@ -35,7 +35,7 @@ impl Cmd {
 		arg!(-d --directory "Search for directories.")
 		.conflicts_with("file")
 		.visible_alias("dir"),
-		Arg::new("no-ignore").short('I').long("no-ignore").help("Do not respect .ignore files."),
+		arg!(-i --ignore "Read .ignore and .gitignore files and apply their settings."),
 		arg!(-a --hidden "Do not ignore hidden files and directories."),
 		arg!(-q --quiet "Do not report non fatal errors."),
 		arg!(n: -n <N> "Show top N matches for each argument past. A value of 0 means all.")
@@ -57,16 +57,15 @@ impl Cmd {
 			FileType::Any
 		};
 
-		let n = m.value_of("n").unwrap().parse::<usize>().unwrap();
+		let n = m.value_of_t_or_exit::<usize>("n");
 		let args = m
 			.values_of("args")
 			.unwrap()
 			.map(Pattern::new)
 			.collect::<Result<Vec<_>, _>>()?;
 
-		let depth = m
-			.value_of("depth")
-			.and_then(|s| s.parse::<usize>().ok().filter(|&n| n > 0));
+		let depth = m.value_of_t::<usize>("depth").ok();
+
 		let root = m.value_of("root").map(PathBuf::from).unwrap();
 
 		Ok(Self {
@@ -78,7 +77,7 @@ impl Cmd {
 			quiet: m.is_present("quiet"),
 			follow_links: m.is_present("follow-links"),
 			hidden: m.is_present("hidden"),
-			ignore: !m.is_present("no-ignore"),
+			ignore: m.is_present("ignore"),
 		})
 	}
 }
