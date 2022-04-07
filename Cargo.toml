@@ -1,9 +1,9 @@
 [package]
 name = "fd"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 
 [dependencies]
-clap = { version = "3.0.0", features = ["cargo", "unicode", "wrap_help"] }
+clap = { version = "3.1.8", features = ["cargo", "unicode", "wrap_help"] }
 globset = "0.4.8"
 ignore = "0.4.18"

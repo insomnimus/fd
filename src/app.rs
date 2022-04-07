@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{
 	arg,
 	crate_version,
-	App,
+	Command,
 	Arg,
 };
 
@@ -23,7 +23,7 @@ pub struct Cmd {
 
 impl Cmd {
 	pub fn from_args() -> Result<Self, globset::Error> {
-		let m = App::new("fd")
+		let m = Command::new("fd")
 		.about("Find files and directories.")
 		.version(crate_version!())
 		.args(&[
